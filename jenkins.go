@@ -34,10 +34,13 @@ type BasicAuth struct {
 }
 
 type Jenkins struct {
-	Server    string
-	Version   string
-	Raw       *ExecutorResponse
-	Requester *Requester
+	// Server is the jenkins server to connect to, it may be in front of a gateway
+	Server string
+	// JenkinsURL is the jenkins server configuration with, it is configured in `/configure` URL
+	JenkinsURL string
+	Version    string
+	Raw        *ExecutorResponse
+	Requester  *Requester
 }
 
 // Loggers
@@ -596,13 +599,27 @@ func (j *Jenkins) Poll(ctx context.Context) (int, error) {
 // Creates a new Jenkins Instance
 // Optional parameters are: client, username, password or token
 // After creating an instance call init method.
-func CreateJenkins(client *http.Client, base string, auth ...interface{}) *Jenkins {
+func CreateJenkins(client *http.Client, server string, auth ...interface{}) *Jenkins {
+	return CreateJenkinsAdvanced(client, server, server, auth...)
+}
+
+// Creates a new Jenkins Instance
+// server is the url connect to the Jenkins Server(before gateway)
+// jenkinsURL is the Jenkins URL behind the gateway
+// Optional parameters are: client, username, password or token
+// After creating an instance call init method.
+func CreateJenkinsAdvanced(client *http.Client, server string, jenkinsURL string, auth ...interface{}) *Jenkins {
 	j := &Jenkins{}
-	if strings.HasSuffix(base, "/") {
-		base = base[:len(base)-1]
+	// in most case, server you connect to is real Jenkins URL
+	if jenkinsURL == "" {
+		jenkinsURL = server
 	}
-	j.Server = base
-	j.Requester = &Requester{Base: base, SslVerify: true, Client: client}
+	if strings.HasSuffix(server, "/") {
+		server = server[:len(server)-1]
+	}
+	j.Server = server
+	j.JenkinsURL = jenkinsURL
+	j.Requester = &Requester{Base: server, SslVerify: true, Client: client}
 	if j.Requester.Client == nil {
 		j.Requester.Client = http.DefaultClient
 	}
