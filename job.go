@@ -121,12 +121,13 @@ func (j *Job) GetDetails() *JobResponse {
 }
 
 func (j *Job) GetBuild(ctx context.Context, id int64) (*Build, error) {
-
 	// Support customized server URL,
 	// i.e. Server : https://<domain>/jenkins/job/JOB1
 	// "https://<domain>/jenkins/" is the server URL,
-	// we are expecting jobURL = "job/JOB1"
-	jobURL := strings.Replace(j.Raw.URL, j.Jenkins.JenkinsURL, "", -1)
+	// we are expecting jobURL = "/job/JOB1"
+	// j.Raw.URL will be "https://<domain>/jenkins/job/JOB1/", so we need to remove the last "/"
+	// and then add / to the prefix
+	jobURL := "/" + strings.Trim(strings.Replace(j.Raw.URL, j.Jenkins.JenkinsURL, "", -1), "/")
 	build := Build{Jenkins: j.Jenkins, Job: j, Raw: new(BuildResponse), Depth: 1, Base: jobURL + "/" + strconv.FormatInt(id, 10)}
 	status, err := build.Poll(ctx)
 	if err != nil {
